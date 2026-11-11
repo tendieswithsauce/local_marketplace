@@ -1,4 +1,6 @@
 // app/page.tsx
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { ArrowRight, ShieldCheck, MapPin, Zap } from 'lucide-react'
 
@@ -82,7 +84,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="w-full text-center py-6 border-t text-xs text-gray-400">
-        Local Recommerce Marketplace MVP &copy; {new Date().getFullYear()}
+        Local Recommerce Marketplace MVP &copy; 2026
       </footer>
     </div>
   )

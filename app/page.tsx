@@ -1,12 +1,8 @@
 // app/page.tsx
-import { connection } from 'next/server'
 import Link from 'next/link'
 import { ArrowRight, ShieldCheck, MapPin, Zap } from 'lucide-react'
 
-export default async function HomePage() {
-  // Opts the page out of static generation during build time
-  await connection()
-
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
       {/* Navigation Header */}

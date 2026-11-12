@@ -1,7 +1,5 @@
 // app/page.tsx
 import Link from 'next/link'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import {
   ShieldCheck,
   UserCheck,
@@ -14,9 +12,7 @@ import {
   Home as HomeIcon,
 } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
-
-// Sample preview items matching your concept (can be swapped for live Supabase query)
+// Sample preview items matching your concept
 const FEATURED_AUCTIONS = [
   {
     id: '1',
@@ -64,24 +60,7 @@ const FEATURED_AUCTIONS = [
   },
 ]
 
-export default async function HomePage() {
-  // Check if user is logged in to route CTAs appropriately
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-      },
-    }
-  )
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#1E293B] flex flex-col font-sans">
       {/* Top Navigation */}
@@ -107,21 +86,12 @@ export default async function HomePage() {
           <a href="#how-it-works" className="hover:text-[#F26B5B] transition">
             How It Works
           </a>
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="px-4 py-2 rounded-full bg-[#0E4D5C] text-white hover:bg-[#093641] transition"
-            >
-              Dashboard
-            </Link>
-          ) : (
-            <Link
-              href="/signup"
-              className="px-4 py-2 rounded-full border-2 border-[#0E4D5C] text-[#0E4D5C] hover:bg-[#0E4D5C] hover:text-white transition"
-            >
-              Sign In / Join
-            </Link>
-          )}
+          <Link
+            href="/signup"
+            className="px-4 py-2 rounded-full border-2 border-[#0E4D5C] text-[#0E4D5C] hover:bg-[#0E4D5C] hover:text-white transition"
+          >
+            Sign In / Join
+          </Link>
         </nav>
       </header>
 
@@ -143,7 +113,6 @@ export default async function HomePage() {
           {/* Illustrated Neighborhood Banner Card */}
           <div className="mt-10 relative max-w-4xl mx-auto rounded-3xl bg-[#A8D5BA] p-6 sm:p-10 shadow-sm border-2 border-[#0E4D5C]/10 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center text-left">
-              {/* Left Card: Live Bidding */}
               <div className="bg-white rounded-2xl p-5 shadow-md border border-slate-100">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase text-[#0E4D5C] bg-[#A8D5BA]/40 px-2.5 py-1 rounded-full">
@@ -157,7 +126,6 @@ export default async function HomePage() {
                 </p>
               </div>
 
-              {/* Center Badge */}
               <div className="flex flex-col items-center justify-center text-center py-2">
                 <div className="w-20 h-20 rounded-full bg-[#0E4D5C] text-white flex items-center justify-center shadow-lg mb-3">
                   <ShieldCheck className="w-10 h-10 text-[#A8D5BA]" />
@@ -170,7 +138,6 @@ export default async function HomePage() {
                 </span>
               </div>
 
-              {/* Right Card: Escrow Badge */}
               <div className="bg-white rounded-2xl p-5 shadow-md border border-slate-100">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0E4D5C] text-white text-xs font-bold mb-3">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#A8D5BA]" /> Pay securely
@@ -183,7 +150,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Primary & Secondary CTAs (App Store Buttons Removed) */}
+          {/* Primary & Secondary CTAs (App Store Buttons Ignored) */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/listings"
@@ -193,7 +160,7 @@ export default async function HomePage() {
             </Link>
 
             <Link
-              href={user ? '/dashboard' : '/signup'}
+              href="/signup"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-[#F26B5B] text-white font-bold text-lg shadow-md hover:bg-[#e05848] transition"
             >
               Start Your First Auction
@@ -256,7 +223,6 @@ export default async function HomePage() {
                     </p>
                   </div>
 
-                  {/* Links to public listings / item detail view */}
                   <Link
                     href={`/listings?item=${item.id}`}
                     className={`w-full block text-center py-2 rounded-lg text-white text-xs font-bold tracking-wide hover:opacity-90 transition ${item.accent}`}
@@ -269,7 +235,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Trust Pillars (How It Works) */}
+        {/* Trust Pillars */}
         <section id="how-it-works" className="max-w-5xl mx-auto px-6 py-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
             <div className="flex flex-col items-center space-y-3">

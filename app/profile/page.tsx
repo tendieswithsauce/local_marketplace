@@ -3,11 +3,12 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { DEFAULT_HUB, HUBS } from '@/lib/hubs'
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
-  const [preferredHub, setPreferredHub] = useState('Edmonton - Downtown Hub')
+  const [preferredHub, setPreferredHub] = useState<string>(DEFAULT_HUB)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
@@ -17,11 +18,16 @@ export default function ProfilePage() {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        // The profile row is created automatically on sign-up (DB trigger).
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, phone, preferred_hub')
+          .eq('id', user.id)
+          .single()
         if (data) {
           setFullName(data.full_name || '')
           setPhone(data.phone || '')
-          setPreferredHub(data.preferred_hub || 'Edmonton - Downtown Hub')
+          setPreferredHub(data.preferred_hub || DEFAULT_HUB)
         }
       }
       setLoading(false)
@@ -36,20 +42,25 @@ export default function ProfilePage() {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (user) {
-      const { error } = await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: fullName,
-        phone,
-        preferred_hub: preferredHub,
-        updated_at: new Date().toISOString()
-      })
+    if (!user) {
+      setStatusMsg('You must be signed in to update your profile.')
+      setSaving(false)
+      return
+    }
 
-      if (error) {
-        setStatusMsg('Error updating profile: ' + error.message)
-      } else {
-        setStatusMsg('Profile updated successfully!')
-      }
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: fullName || null,
+        phone: phone || null,
+        preferred_hub: preferredHub,
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      setStatusMsg('Error updating profile: ' + error.message)
+    } else {
+      setStatusMsg('Profile updated successfully!')
     }
     setSaving(false)
   }
@@ -95,10 +106,11 @@ export default function ProfilePage() {
               onChange={(e) => setPreferredHub(e.target.value)}
               className="mt-1 w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
             >
-              <option value="Edmonton - Downtown Hub">Edmonton - Downtown Hub</option>
-              <option value="Edmonton - West Hub">Edmonton - West Hub</option>
-              <option value="Edmonton - South Hub">Edmonton - South Hub</option>
-              <option value="Edmonton - East Hub">Edmonton - East Hub</option>
+              {HUBS.map((hub) => (
+                <option key={hub.id} value={hub.id}>
+                  {hub.name}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -3,7 +3,11 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { PlusCircle, Package } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
+import { DEFAULT_HUB, HUBS } from '@/lib/hubs'
+import { dollarsToCents } from '@/lib/money'
+
+const AUCTION_DURATIONS_DAYS = [1, 3, 5, 7] as const
 
 export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false)
@@ -11,13 +15,21 @@ export default function DashboardPage() {
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [listingType, setListingType] = useState<'fixed' | 'auction'>('fixed')
-  const [locationHub, setLocationHub] = useState('Edmonton - Downtown Hub')
+  const [durationDays, setDurationDays] = useState<number>(3)
+  const [locationHub, setLocationHub] = useState<string>(DEFAULT_HUB)
   const [loading, setLoading] = useState(false)
 
   const supabase = createClient()
 
   const handleCreateListing = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const priceCents = dollarsToCents(price)
+    if (priceCents === null) {
+      alert('Please enter a valid price greater than $0.')
+      return
+    }
+
     setLoading(true)
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -28,15 +40,23 @@ export default function DashboardPage() {
       return
     }
 
+    // Fixed-price listings use buy_now_price_cents; auctions need a starting
+    // price and an end time (enforced by a DB check constraint).
+    const pricing =
+      listingType === 'fixed'
+        ? { buy_now_price_cents: priceCents }
+        : {
+            starting_price_cents: priceCents,
+            ends_at: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
+          }
+
     const { error } = await supabase.from('listings').insert({
       seller_id: user.id,
       title,
-      description,
-      price: parseFloat(price),
+      description: description || null,
       listing_type: listingType,
       location_hub: locationHub,
-      status: 'active',
-      images: []
+      ...pricing,
     })
 
     if (error) {
@@ -82,10 +102,13 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Price ($)</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {listingType === 'auction' ? 'Starting Price ($)' : 'Price ($)'}
+                  </label>
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
@@ -96,7 +119,7 @@ export default function DashboardPage() {
                   <label className="block text-sm font-medium text-gray-700">Format</label>
                   <select
                     value={listingType}
-                    onChange={(e) => setListingType(e.target.value as any)}
+                    onChange={(e) => setListingType(e.target.value as 'fixed' | 'auction')}
                     className="mt-1 w-full border px-3 py-2 rounded-lg"
                   >
                     <option value="fixed">Fixed Price</option>
@@ -105,6 +128,23 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {listingType === 'auction' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Auction Length</label>
+                  <select
+                    value={durationDays}
+                    onChange={(e) => setDurationDays(Number(e.target.value))}
+                    className="mt-1 w-full border px-3 py-2 rounded-lg"
+                  >
+                    {AUCTION_DURATIONS_DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {d} {d === 1 ? 'day' : 'days'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">Pickup Hub</label>
                 <select
@@ -112,10 +152,11 @@ export default function DashboardPage() {
                   onChange={(e) => setLocationHub(e.target.value)}
                   className="mt-1 w-full border px-3 py-2 rounded-lg"
                 >
-                  <option value="Edmonton - Downtown Hub">Edmonton - Downtown Hub</option>
-                  <option value="Edmonton - West Hub">Edmonton - West Hub</option>
-                  <option value="Edmonton - South Hub">Edmonton - South Hub</option>
-                  <option value="Edmonton - East Hub">Edmonton - East Hub</option>
+                  {HUBS.map((hub) => (
+                    <option key={hub.id} value={hub.id}>
+                      {hub.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

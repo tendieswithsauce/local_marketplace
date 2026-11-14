@@ -1,44 +1,56 @@
 // app/listings/page.tsx
 'use client'
 
-export const dynamic = 'force-dynamic'
-
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { MapPin, Tag, Clock, ArrowRight, Gavel, Home as HomeIcon } from 'lucide-react'
+import { HUBS, hubName } from '@/lib/hubs'
+import { formatCents } from '@/lib/money'
+import { MapPin, Home as HomeIcon } from 'lucide-react'
+
+const LISTING_COLUMNS =
+  'id, title, listing_type, location_hub, image_paths, buy_now_price_cents, starting_price_cents, current_bid_cents, ends_at'
 
 interface Listing {
-  id: string
+  id: number
   title: string
-  price: number
   listing_type: 'fixed' | 'auction'
   location_hub: string
-  images: string[]
-  seller_name?: string
-  time_left?: string
+  image_paths: string[]
+  buy_now_price_cents: number | null
+  starting_price_cents: number | null
+  current_bid_cents: number | null
+  ends_at: string | null
 }
 
-const LOCATIONS = [
-  'All Hubs',
-  'Edmonton - Downtown Hub',
-  'Edmonton - West Hub',
-  'Edmonton - South Hub',
-  'Edmonton - East Hub'
-]
+const ALL_HUBS = 'all'
+
+function displayPriceCents(item: Listing): number {
+  if (item.listing_type === 'auction') {
+    return item.current_bid_cents ?? item.starting_price_cents ?? 0
+  }
+  return item.buy_now_price_cents ?? 0
+}
 
 export default function ListingsPage() {
   const [listings, setListings] = useState<Listing[]>([])
-  const [selectedLocation, setSelectedLocation] = useState('All Hubs')
+  const [selectedLocation, setSelectedLocation] = useState<string>(ALL_HUBS)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+
+  const photoUrl = (path: string) =>
+    supabase.storage.from('listing-photos').getPublicUrl(path).data.publicUrl
 
   useEffect(() => {
     async function fetchListings() {
       setLoading(true)
-      let query = supabase.from('listings').select('*').eq('status', 'active')
+      let query = supabase
+        .from('listings')
+        .select(LISTING_COLUMNS)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
 
-      if (selectedLocation !== 'All Hubs') {
+      if (selectedLocation !== ALL_HUBS) {
         query = query.eq('location_hub', selectedLocation)
       }
 
@@ -107,9 +119,10 @@ export default function ListingsPage() {
               onChange={(e) => setSelectedLocation(e.target.value)}
               className="bg-transparent focus:outline-none text-sm font-bold text-[#0E4D5C]"
             >
-              {LOCATIONS.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
+              <option value={ALL_HUBS}>All Hubs</option>
+              {HUBS.map((hub) => (
+                <option key={hub.id} value={hub.id}>
+                  {hub.name}
                 </option>
               ))}
             </select>
@@ -147,9 +160,9 @@ export default function ListingsPage() {
                 className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
               >
                 <div className="h-44 bg-slate-100 relative overflow-hidden">
-                  {item.images?.[0] ? (
+                  {item.image_paths?.[0] ? (
                     <img
-                      src={item.images[0]}
+                      src={photoUrl(item.image_paths[0])}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
@@ -177,12 +190,12 @@ export default function ListingsPage() {
                     <p className="text-sm text-slate-700 mt-1">
                       {item.listing_type === 'auction' ? 'Current Bid:' : 'Price:'}{' '}
                       <span className="font-extrabold text-slate-900">
-                        ${item.price.toFixed(2)}
+                        {formatCents(displayPriceCents(item))}
                       </span>
                     </p>
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                       <MapPin className="w-3.5 h-3.5 text-[#F26B5B]" />
-                      {item.location_hub.replace('Edmonton - ', '')}
+                      {hubName(item.location_hub).replace('Edmonton - ', '')}
                     </p>
                   </div>
 
